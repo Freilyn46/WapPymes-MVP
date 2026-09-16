@@ -41,14 +41,17 @@ alter table public.businesses enable row level security;
 alter table public.services enable row level security;
 alter table public.bookings enable row level security;
 
+drop policy if exists "Public can read businesses" on public.businesses;
 create policy "Public can read businesses"
 on public.businesses for select
 using (true);
 
+drop policy if exists "Owners can insert businesses" on public.businesses;
 create policy "Owners can insert businesses"
 on public.businesses for insert
 with check (auth.uid() = owner_id);
 
+drop policy if exists "Owners can update businesses" on public.businesses;
 create policy "Owners can update businesses"
 on public.businesses for update
 using (owner_id = auth.uid())
@@ -64,10 +67,12 @@ create policy "Owners can create businesses"
 on public.businesses for insert
 with check (owner_id = auth.uid());
 
+drop policy if exists "Owners can delete businesses" on public.businesses;
 create policy "Owners can delete businesses"
 on public.businesses for delete
 using (auth.uid() = owner_id);
 
+drop policy if exists "Public can read active services" on public.services;
 create policy "Public can read active services"
 on public.services for select
 using (active = true);

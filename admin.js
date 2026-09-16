@@ -26,7 +26,12 @@
       .select('*').eq('owner_id', state.user.id).maybeSingle();
     if (error) throw error;
     state.business = data;
-    if (!data) return;
+    if (!data) {
+      $('publicLink').textContent = 'Guarda los datos del negocio para publicar tu página.';
+      $('servicesList').innerHTML = '<p class="text-sm text-slate-500">Guarda primero el negocio para agregar servicios.</p>';
+      $('bookingsList').innerHTML = '<p class="text-sm text-slate-500">Las reservas aparecerán aquí después de publicar el negocio.</p>';
+      return;
+    }
     $('businessName').value = data.name || '';
     $('businessSlug').value = data.slug_url || '';
     $('businessPhone').value = data.whatsapp_phone || '';
@@ -152,7 +157,12 @@
       await loadServices();
       showStatus('Servicio agregado.');
     });
-    $('refreshBookings').addEventListener('click', loadBookings);
+    $('refreshBookings').addEventListener('click', () => {
+      loadBookings().catch((error) => {
+        console.error(error);
+        showStatus('No se pudieron actualizar las reservas.', true);
+      });
+    });
     bootPanel();
   });
 })();
