@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WapPymes - Automatización de Citas y Pedidos por WhatsApp</title>
+    <!-- Tailwind CDN para estilo inmediato (puedes quitarlo al compilar Tailwind localmente) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="dist/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+    <!-- HEADER / HERO -->
+    <header class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between">
+            <div class="md:w-1/2 mb-8 md:mb-0">
+                <span class="bg-emerald-500 text-xs font-semibold uppercase px-3 py-1 rounded-full tracking-wider">MVP en Desarrollo</span>
+                <h1 class="text-4xl sm:text-5xl font-extrabold mt-3 mb-4 leading-tight">Automatiza Citas y Pedidos por WhatsApp para PYMES</h1>
+                <p class="text-emerald-100 text-lg mb-6">Simplifica la atención a tus clientes. Sin complejas instalaciones: selecciona tu servicio, programa y envía el resumen directamente al WhatsApp del negocio.</p>
+                <div class="flex space-x-4">
+                    <a href="#demo" class="bg-white text-emerald-700 font-bold px-6 py-3 rounded-xl shadow hover:bg-emerald-50 transition"><i class="fa-solid fa-play mr-2"></i> Probar Demo</a>
+                    <a href="#contacto" class="border border-white text-white font-bold px-6 py-3 rounded-xl hover:bg-white/10 transition">Unirme al Lanzamiento</a>
+                </div>
+            </div>
+            <div class="md:w-1/2 flex justify-center">
+                <div class="bg-white/10 p-6 rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl w-full max-w-md">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-3 h-3 bg-red-400 rounded-full"></div>
+                        <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                        <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                        <span class="text-xs text-emerald-200 ml-auto">Simulador de Pedido</span>
+                    </div>
+                    <div class="space-y-3 text-slate-900">
+                        <div class="bg-white p-3 rounded-lg text-sm shadow-sm">
+                            <p class="font-bold text-emerald-700">💈 Barbería El Estilo</p>
+                            <p class="text-xs text-slate-500">Servicio seleccionado: Corte + Barba</p>
+                        </div>
+                        <div class="bg-emerald-600 text-white p-3 rounded-lg text-sm text-center font-medium shadow flex items-center justify-center space-x-2">
+                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                            <span>Enviar Orden a WhatsApp (Generado Automáticamente)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SECCIÓN: CÓMO FUNCIONA -->
+    <section class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-slate-900">¿Cómo Funciona el MVP?</h2>
+            <p class="text-slate-600 mt-2">Una arquitectura ligera pensada para escalar sin complicaciones.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold mb-4">1</div>
+                <h3 class="font-bold text-lg mb-2">Panel del Negocio</h3>
+                <p class="text-slate-600 text-sm">El dueño registra sus productos o servicios, horarios disponibles y número de WhatsApp.</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold mb-4">2</div>
+                <h3 class="font-bold text-lg mb-2">Vista Pública del Cliente</h3>
+                <p class="text-slate-600 text-sm">Página ligera y rápida en móviles donde el cliente elige fecha, hora y lo que necesita ordenar.</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold mb-4">3</div>
+                <h3 class="font-bold text-lg mb-2">Conexión WhatsApp</h3>
+                <p class="text-slate-600 text-sm">Se genera un enlace directo tipo <code class="bg-slate-100 text-emerald-600 px-1 rounded">wa.me</code> con el pedido estructurado y listo para enviar.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN: SUPABASE Y LINK PERSONALIZADO -->
+    <section id="supabase-panel" class="py-10 bg-white border-b border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">Supabase</p>
+                    <h3 class="text-xl font-bold text-slate-900">Conexión activa con el proyecto</h3>
+                </div>
+                <button id="testSupabaseBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl">Probar conexión</button>
+            </div>
+            <p id="supabaseStatus" class="mt-3 text-sm text-slate-600">Conectando con Supabase…</p>
+        </div>
+    </section>
+
+    <section id="generator" class="py-16 bg-slate-50">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-slate-900">Generador de Link Personalizado</h2>
+                <p class="text-slate-600 mt-2">Crea un enlace corto y fácil de compartir para tu negocio (ej. wappymes.com/tu-negocio).</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Negocio</label>
+                        <input type="text" id="generatorName" class="w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ej. Peluqueria El Estilo">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Slug personalizado (opcional)</label>
+                        <input type="text" id="generatorSlug" class="w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ej. peluqueria-el-estilo">
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button id="generateBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl">Generar Link</button>
+                    <button id="saveLinkBtn" class="bg-white border border-emerald-600 text-emerald-600 font-bold py-2 px-4 rounded-xl">Guardar (Supabase)</button>
+                </div>
+
+                <div id="genStatus" class="mt-4 text-sm text-slate-600"></div>
+
+                <div class="mt-4 p-4 bg-slate-100 rounded-lg border border-slate-200">
+                    <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Enlace generado</p>
+                    <div class="flex items-center justify-between">
+                        <a id="generatedLink" class="text-emerald-700 break-words" href="#">https://wappymes.com/tu-negocio</a>
+                        <div class="flex items-center gap-2">
+                            <button id="copyLinkBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded">Copiar</button>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500">Nota: para persistir el slug, la tabla `businesses` debe existir en Supabase con una columna `slug_url` y `name`.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN: SIMULADOR INTERACTIVO (DEMO FUNCIONAL) -->
+    <section id="demo" class="py-16 bg-emerald-900 text-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold">Prueba el Simulador de Enlace WhatsApp</h2>
+                <p class="text-emerald-200 mt-2">Completa los datos como lo haría un cliente y genera el enlace automático.</p>
+            </div>
+
+            <div class="bg-white text-slate-800 p-8 rounded-3xl shadow-2xl">
+                <form id="orderForm" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Negocio (o Teléfono WhatsApp)</label>
+                            <input type="text" id="businessPhone" value="8094934339" class="w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ej. 8095551234" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Servicio o Producto</label>
+                            <select id="serviceName" class="w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="Corte de pelo + Barba">Corte de pelo + Barba ($500)</option>
+                                <option value="Manicure y Pedicure">Manicure y Pedicure ($800)</option>
+                                <option value="Hamburguesa Doble Especial">Hamburguesa Doble Especial ($350)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Reserva/Pedido</label>
+                            <input type="date" id="orderDate" class="w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Hora</label>
+                            <input type="time" id="orderTime" value="16:00" class="w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Cliente</label>
+                        <input type="text" id="clientName" value="Juan Pérez" class="w-full border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Tu nombre" required>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="button" onclick="generateWhatsAppLink()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg">
+                            <i class="fa-brands fa-whatsapp text-xl"></i>
+                            <span>Generar y Abrir Enlace de WhatsApp</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Vista previa del mensaje generado -->
+                <div class="mt-8 bg-slate-100 p-4 rounded-xl border border-slate-200">
+                    <p class="text-xs font-bold text-slate-500 uppercase mb-1">Mensaje estructurado que se enviará:</p>
+                    <pre id="previewMessage" class="text-xs text-slate-700 whitespace-pre-wrap bg-white p-3 rounded border border-slate-200 font-mono"></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SOBRE EL DESARROLLADOR / CONTACTO -->
+    <section id="contacto" class="py-16 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl font-bold text-slate-900 mb-4">Sobre el Creador</h2>
+        <p class="text-slate-600 max-w-xl mx-auto mb-8">Hola, soy <strong>Freilyn</strong>. Estoy desarrollando este MVP escalable utilizando tecnologías modernas (Frontend con Next.js/Vue/Tailwind, Backend Node/Python y bases de datos Supabase).</p>
+        
+        <div class="inline-block bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <p class="text-slate-700 font-medium">¿Interesado en probar la plataforma para tu PYME?</p>
+            <a href="mailto:tuemail@email.com" class="inline-block mt-3 text-emerald-600 font-bold hover:underline">
+                <i class="fa-solid fa-envelope mr-2"></i>freilynhernandes472@gmail.com
+            </a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 text-slate-400 py-6 text-center text-sm">
+        <p>&copy; 2026 Freilyn. Todos los derechos reservados. Plataforma de automatización de citas y pedidos para PYMES.</p>
+    </footer>
+
+    <!-- SCRIPT DE LÓGICA WHATSAPP -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "wappymes-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./Global.css -o ./dist/styles.css --minify",
+    "watch:css": "npx tailwindcss -i ./Global.css -o ./dist/styles.css --watch",
+    "dev": "python -m http.server 8000",
+    "start": "python -m http.server 8000"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
+  }
+}
