@@ -32,6 +32,11 @@
     return await window.supabaseClient.auth.signOut();
   }
 
+  async function getUser() {
+    if (!window.supabaseClient) init();
+    return await window.supabaseClient.auth.getUser();
+  }
+
   async function saveBusiness({ slug_url, name, whatsapp_phone }) {
     if (!window.supabaseClient) init();
     return await window.supabaseClient
@@ -69,6 +74,7 @@
     signUp,
     signIn,
     signOut,
+    getUser,
     saveBusiness,
     getBusinessBySlug,
     getServices,
