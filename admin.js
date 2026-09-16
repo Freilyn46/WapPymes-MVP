@@ -89,7 +89,7 @@
     try {
       window.SB.init();
       const { data: { user }, error } = await window.SB.getUser();
-      if (error) throw error;
+      if (error && error.message !== 'Auth session missing!') throw error;
       if (!user) return;
       state.user = user;
       $('authView').classList.add('hidden');
