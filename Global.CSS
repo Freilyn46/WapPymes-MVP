@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -6,49 +6,10 @@
   color-scheme: light;
 }
 
-* {
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+html {
   scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-:focus-visible {
-  /* Use a CSS variable fallback in case Tailwind's theme() isn't available
-     during plain CSS processing. Replace the hex with your brand color if needed. */
-  outline: 2px solid var(--brand-500, #2563eb);
-  outline-offset: 2px;
-}
-
-.input-field {
-  /* Avoid applying placeholder: variant with @apply (can fail in some toolchains).
-     Keep the Tailwind utilities and set placeholder color with a ::placeholder rule. */
-  @apply w-full rounded-ticket border border-line bg-white px-3.5 py-2.5 text-ink focus:border-brand-500 focus:ring-1 focus:ring-brand-500;
-}
-
-.input-field::placeholder {
-  /* muted gray with ~70% visibility; adjust to your design tokens or Tailwind color. */
-  color: rgba(107,117,128,0.7);
-}
-
-.label-field {
-  @apply mb-1.5 block text-sm font-medium text-ink;
-}
-
-.btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-ticket bg-brand-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60;
-}
-
-.btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 rounded-ticket border border-line bg-white px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-brand-500 hover:text-brand-600;
-}
-
-.card {
-  @apply rounded-ticket border border-line bg-white p-5;
 }

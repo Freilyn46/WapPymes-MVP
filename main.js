@@ -1,9 +1,8 @@
-(function () {
+﻿(function () {
   const appConfig = window.APP_CONFIG || {};
 
   function normalizePhone(phone) {
-    const raw = String(phone || '').replace(/\D/g, '');
-    return raw;
+    return String(phone || '').replace(/\D/g, '');
   }
 
   function slugify(text) {
@@ -17,19 +16,32 @@
       .replace(/-+$/g, '');
   }
 
-  function buildUrl(slug) {
-    const baseUrl = new URL('business.html', window.location.href);
-    baseUrl.searchParams.set('slug', slug);
-    return baseUrl.toString();
-  }
-
   function setStatus(element, message, isError = false) {
     if (!element) return;
     element.textContent = message;
     element.style.color = isError ? '#dc2626' : '#374151';
   }
 
-  function ensureSupabaseReady(statusElement) {
+  function buildPublicUrl(slug) {
+    const baseUrl = new URL('business.html', window.location.href);
+    baseUrl.searchParams.set('slug', slug);
+    return baseUrl.toString();
+  }
+
+  function getReservationMessage({ service, date, time, client, businessName }) {
+    const lines = [
+      'Hola! Quisiera realizar la siguiente reserva:',
+      '',
+      `Negocio: ${businessName || 'Mi negocio'}`,
+      `Servicio: ${service || 'Sin servicio específico'}`,
+      `Fecha: ${date || 'Por confirmar'}`,
+      `Hora: ${time || 'Por confirmar'}`,
+      `Cliente: ${client || 'Cliente'}`
+    ];
+    return lines.join('\n');
+  }
+
+  function ensureSupabaseReady(statusElement = document.getElementById('supabaseStatus')) {
     if (!window.supabase) {
       setStatus(statusElement, 'La librería de Supabase no cargó correctamente.', true);
       return null;
@@ -43,83 +55,182 @@
       return null;
     }
 
+    try {
+      if (window.SB && !window.supabaseClient) {
+        window.SB.init();
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus(statusElement, 'Supabase no se inicializó. Revisa la URL y la clave pública.', true);
+      return null;
+    }
+
     if (!window.supabaseClient) {
-      window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+      setStatus(statusElement, 'Supabase no se inicializó. Revisa la URL y la clave pública.', true);
+      return null;
     }
 
     return window.supabaseClient;
   }
 
+  async function ensureLoggedIn(statusElement = document.getElementById('authStatus')) {
+    const client = ensureSupabaseReady(document.getElementById('supabaseStatus'));
+    if (!client) return null;
+
+    const user = window.SB ? await window.SB.getCurrentUser() : await client.auth.getUser().then((res) => res.data?.user ?? null);
+    if (!user) {
+      setStatus(statusElement, 'Debes iniciar sesión para guardar o editar negocios.', true);
+      return null;
+    }
+
+    setStatus(statusElement, `Sesión activa: ${user.email}`);
+    return user;
+  }
+
+  function updateAuthUI(user = null) {
+    const authLoggedOut = document.getElementById('authLoggedOut');
+    const authLoggedIn = document.getElementById('authLoggedIn');
+    const authUserEmail = document.getElementById('authUserEmail');
+    const saveLinkBtn = document.getElementById('saveLinkBtn');
+
+    if (authLoggedOut) authLoggedOut.classList.toggle('hidden', !!user);
+    if (authLoggedIn) authLoggedIn.classList.toggle('hidden', !user);
+    if (authUserEmail && user) authUserEmail.textContent = user.email || 'usuario';
+
+    if (saveLinkBtn) {
+      const isAllowed = !!user;
+      saveLinkBtn.disabled = !isAllowed;
+      saveLinkBtn.classList.toggle('opacity-50', !isAllowed);
+      saveLinkBtn.classList.toggle('cursor-not-allowed', !isAllowed);
+      saveLinkBtn.title = isAllowed ? 'Guardar negocio en Supabase' : 'Inicia sesión para guardar';
+    }
+  }
+
+  async function refreshAuthState() {
+    const statusElement = document.getElementById('authStatus');
+    const user = window.SB ? await window.SB.getCurrentUser() : null;
+    updateAuthUI(user);
+    setStatus(statusElement, user ? `Sesión activa: ${user.email}` : 'No has iniciado sesión todavía.');
+  }
+
+  async function signUp() {
+    const email = document.getElementById('authEmail')?.value.trim();
+    const password = document.getElementById('authPassword')?.value.trim();
+    const authStatusEl = document.getElementById('authStatus');
+
+    if (!email || !password) {
+      setStatus(authStatusEl, 'Escribe email y contraseña para registrarte.', true);
+      return;
+    }
+
+    try {
+      const { data, error } = await window.SB.signUp(email, password);
+      if (error) {
+        setStatus(authStatusEl, error.message, true);
+        return;
+      }
+
+      updateAuthUI(data.user || null);
+      setStatus(authStatusEl, 'Registro correcto. Revisa tu correo si Supabase lo requiere.');
+    } catch (error) {
+      console.error(error);
+      setStatus(authStatusEl, 'No se pudo registrar el usuario.', true);
+    }
+  }
+
+  async function signIn() {
+    const email = document.getElementById('authEmail')?.value.trim();
+    const password = document.getElementById('authPassword')?.value.trim();
+    const authStatusEl = document.getElementById('authStatus');
+
+    if (!email || !password) {
+      setStatus(authStatusEl, 'Escribe email y contraseña para iniciar sesión.', true);
+      return;
+    }
+
+    try {
+      const { data, error } = await window.SB.signIn(email, password);
+      if (error) {
+        setStatus(authStatusEl, error.message, true);
+        return;
+      }
+
+      updateAuthUI(data.user || null);
+      setStatus(authStatusEl, `Sesión iniciada como ${data.user?.email ?? 'usuario'}.`);
+    } catch (error) {
+      console.error(error);
+      setStatus(authStatusEl, 'No se pudo iniciar sesión.', true);
+    }
+  }
+
+  async function signOut() {
+    const authStatusEl = document.getElementById('authStatus');
+
+    try {
+      const { error } = await window.SB.signOut();
+      if (error) {
+        setStatus(authStatusEl, error.message, true);
+        return;
+      }
+
+      updateAuthUI(null);
+      setStatus(authStatusEl, 'Sesión cerrada.');
+    } catch (error) {
+      console.error(error);
+      setStatus(authStatusEl, 'No se pudo cerrar la sesión.', true);
+    }
+  }
+
   async function testSupabaseConnection() {
-    const supabaseStatusEl = document.getElementById('supabaseStatus');
-    const client = ensureSupabaseReady(supabaseStatusEl);
+    const client = ensureSupabaseReady(document.getElementById('supabaseStatus'));
     if (!client) return;
 
     try {
       const { data, error } = await client.from('businesses').select('slug_url').limit(1);
       if (error) {
-        setStatus(supabaseStatusEl, 'Conectado a Supabase, pero la tabla `businesses` aún no existe o no tiene permisos.', true);
+        setStatus(document.getElementById('supabaseStatus'), 'Conectado a Supabase, pero la tabla `businesses` aún no existe o no tiene permisos.', true);
         console.warn('Supabase connection warning:', error.message);
         return;
       }
 
-      setStatus(supabaseStatusEl, 'Conexión con Supabase correcta y lista para guardar links.');
+      setStatus(document.getElementById('supabaseStatus'), 'Conexión con Supabase correcta y lista para guardar links.');
       console.log('Supabase ready:', data);
     } catch (error) {
       console.error(error);
-      setStatus(supabaseStatusEl, 'No se pudo conectar a Supabase.', true);
+      setStatus(document.getElementById('supabaseStatus'), 'No se pudo conectar a Supabase.', true);
     }
   }
 
-  function saveBusinessRecord(slug, name, phone) {
-    const client = ensureSupabaseReady(document.getElementById('genStatus'));
-    if (!client || !slug) return;
-
-    return client
-      .from('businesses')
-      .upsert([
-        {
-          slug_url: slug,
-          name: name || 'Mi negocio',
-          whatsapp_phone: normalizePhone(phone)
-        }
-      ], { onConflict: 'slug_url' });
-  }
-
-  function getReservationMessage({ service, date, time, client }) {
-    return `Hola! Quisiera realizar la siguiente reserva:\n\nServicio: ${service}\nFecha: ${date}\nHora: ${time}\nCliente: ${client}`;
-  }
-
-  function updatePreview() {
+  function generateWhatsAppLink() {
     const phone = document.getElementById('businessPhone')?.value || '';
-    const service = document.getElementById('serviceName')?.value || '';
+    const service = document.getElementById('serviceName')?.value || 'Servicio';
     const date = document.getElementById('orderDate')?.value || '';
     const time = document.getElementById('orderTime')?.value || '';
-    const client = document.getElementById('clientName')?.value || '';
+    const client = document.getElementById('clientName')?.value || 'Cliente';
+    const businessName = document.getElementById('businessName')?.textContent || 'Mi negocio';
     const preview = document.getElementById('previewMessage');
+    const message = getReservationMessage({ service, date, time, client, businessName });
 
-    if (!preview) return { phone, message: '' };
+    if (preview) preview.textContent = message;
 
-    const message = getReservationMessage({ service, date, time, client });
-    preview.textContent = message;
-    return { phone, message };
-  }
-
-  function openWhatsAppLink(phone, message) {
-    const cleanedPhone = normalizePhone(phone);
-    if (!cleanedPhone) {
+    const cleanPhone = normalizePhone(phone);
+    if (!cleanPhone) {
       alert('Necesitas poner un número de WhatsApp del negocio.');
       return;
     }
 
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function initializeLandingPage() {
     const supabaseStatusEl = document.getElementById('supabaseStatus');
+    const authStatusEl = document.getElementById('authStatus');
     const testSupabaseBtn = document.getElementById('testSupabaseBtn');
+    const signUpBtn = document.getElementById('signUpBtn');
+    const signInBtn = document.getElementById('signInBtn');
+    const signOutBtn = document.getElementById('signOutBtn');
     const generatorName = document.getElementById('generatorName');
     const generatorSlug = document.getElementById('generatorSlug');
     const generateBtn = document.getElementById('generateBtn');
@@ -128,242 +239,168 @@
     const saveLinkBtn = document.getElementById('saveLinkBtn');
     const genStatus = document.getElementById('genStatus');
 
-    if (testSupabaseBtn) {
-      testSupabaseBtn.addEventListener('click', testSupabaseConnection);
+    if (!supabaseStatusEl && !authStatusEl && !generateBtn && !saveLinkBtn) {
+      return;
     }
 
-    if (generateBtn && generatedLink && generatorName && generatorSlug) {
-      generateBtn.addEventListener('click', () => {
-        const name = generatorName.value.trim();
-        const custom = generatorSlug.value.trim();
-        const slug = slugify(custom || name);
+    if (testSupabaseBtn) testSupabaseBtn.addEventListener('click', testSupabaseConnection);
+    if (signUpBtn) signUpBtn.addEventListener('click', signUp);
+    if (signInBtn) signInBtn.addEventListener('click', signIn);
+    if (signOutBtn) signOutBtn.addEventListener('click', signOut);
 
-        if (!slug) {
-          setStatus(genStatus, 'Escribe un nombre o un slug válido.', true);
-          return;
-        }
+    generateBtn?.addEventListener('click', () => {
+      const name = generatorName?.value.trim() || '';
+      const custom = generatorSlug?.value.trim() || '';
+      const slug = slugify(custom || name);
 
-        const url = buildUrl(slug);
+      if (!slug) {
+        setStatus(genStatus, 'Escribe un nombre o un slug válido.', true);
+        return;
+      }
+
+      const url = buildPublicUrl(slug);
+      if (generatedLink) {
         generatedLink.href = url;
         generatedLink.textContent = url;
-        setStatus(genStatus, 'Link generado. Puedes copiarlo o guardarlo en Supabase.');
-      });
-    }
-
-    if (copyLinkBtn && generatedLink) {
-      copyLinkBtn.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(generatedLink.href);
-          setStatus(genStatus, 'Enlace copiado al portapapeles.');
-        } catch (error) {
-          console.error(error);
-          setStatus(genStatus, 'No se pudo copiar automáticamente. Copia el enlace manualmente.', true);
-        }
-      });
-    }
-
-    if (saveLinkBtn && generatorName && generatorSlug) {
-      saveLinkBtn.addEventListener('click', async () => {
-        const slug = slugify(generatorSlug.value.trim() || generatorName.value.trim());
-        const businessName = generatorName.value.trim() || 'Mi negocio';
-
-        if (!slug) {
-          setStatus(genStatus, 'Primero genera un link válido.', true);
-          return;
-        }
-
-        try {
-          const client = ensureSupabaseReady(genStatus);
-          if (!client) return;
-          const { error } = await client
-            .from('businesses')
-            .upsert([
-              {
-                slug_url: slug,
-                name: businessName,
-                whatsapp_phone: normalizePhone(document.getElementById('businessPhone')?.value || '')
-              }
-            ], { onConflict: 'slug_url' });
-
-          if (error) {
-            throw error;
-          }
-
-          setStatus(genStatus, 'Link guardado en Supabase correctamente.');
-        } catch (error) {
-          console.error(error);
-          setStatus(genStatus, 'Error guardando en Supabase. Revisa la tabla `businesses` y las columnas.', true);
-        }
-      });
-    }
-
-    const orderForm = document.getElementById('orderForm');
-    if (orderForm) {
-      orderForm.addEventListener('input', updatePreview);
-      const dateInput = document.getElementById('orderDate');
-      if (dateInput && !dateInput.value) {
-        dateInput.value = '2026-09-18';
       }
-      updatePreview();
-    }
+      setStatus(genStatus, 'Link generado. Inicia sesión para guardarlo en Supabase.');
+    });
 
-    const businessReservationForm = document.getElementById('businessReservationForm');
-    if (businessReservationForm) {
-      const businessPhone = document.getElementById('businessPhone');
-      const serviceName = document.getElementById('serviceName');
-      const orderDate = document.getElementById('orderDate');
-      const orderTime = document.getElementById('orderTime');
-      const clientName = document.getElementById('clientName');
-      const clientPhone = document.getElementById('clientPhone');
-      const businessNameEl = document.getElementById('businessName');
-      const businessMetaEl = document.getElementById('businessMeta');
-      const reservationStatusEl = document.getElementById('reservationStatus');
-      let businessData = null;
-
-      const slug = new URLSearchParams(window.location.search).get('slug');
-      const normalizedSlug = slugify(slug || '');
-
-      const loadBusiness = async () => {
-        if (!normalizedSlug) {
-          if (businessNameEl) businessNameEl.textContent = 'Negocio no encontrado';
-          if (businessMetaEl) businessMetaEl.textContent = 'No se indicó un slug válido.';
+    copyLinkBtn?.addEventListener('click', async () => {
+      try {
+        if (!generatedLink?.href) {
+          setStatus(genStatus, 'Primero genera un enlace válido.', true);
           return;
         }
+        await navigator.clipboard.writeText(generatedLink.href);
+        setStatus(genStatus, 'Enlace copiado al portapapeles.');
+      } catch (error) {
+        console.error(error);
+        setStatus(genStatus, 'No se pudo copiar automáticamente. Copia el enlace manualmente.', true);
+      }
+    });
 
-        const client = ensureSupabaseReady(businessMetaEl);
-        if (!client) return;
+    saveLinkBtn?.addEventListener('click', async () => {
+      const slug = slugify(generatorSlug?.value.trim() || generatorName?.value.trim() || '');
+      const businessName = generatorName?.value.trim() || 'Mi negocio';
 
-        try {
-          const { data, error } = await window.SB.getBusinessBySlug(normalizedSlug);
-
-          if (error) throw error;
-
-          if (!data) {
-            if (businessNameEl) businessNameEl.textContent = 'Negocio no encontrado';
-            if (businessMetaEl) businessMetaEl.textContent = 'El enlace no existe o aún no se ha registrado.';
-            return;
-          }
-
-          businessData = data;
-          if (businessNameEl) businessNameEl.textContent = data.name || 'Mi negocio';
-          if (businessMetaEl) businessMetaEl.textContent = 'Haz tu reserva y envíala directamente por WhatsApp.';
-          if (businessPhone) businessPhone.value = data.whatsapp_phone || '';
-
-          const servicesResult = await window.SB.getServices(data.id);
-          if (servicesResult.error) throw servicesResult.error;
-          if (serviceName) {
-            serviceName.replaceChildren();
-            const services = servicesResult.data || [];
-            if (!services.length) {
-              const option = document.createElement('option');
-              option.value = '';
-              option.textContent = 'Sin servicio específico';
-              serviceName.append(option);
-            }
-            services.forEach((service) => {
-              const option = document.createElement('option');
-              option.value = service.id;
-              option.dataset.name = service.name;
-              option.textContent = service.price == null
-                ? service.name
-                : `${service.name} (RD$ ${Number(service.price).toLocaleString('es-DO')})`;
-              serviceName.append(option);
-            });
-          }
-          updatePreview();
-        } catch (error) {
-          console.error(error);
-          if (businessNameEl) businessNameEl.textContent = 'Error al cargar el negocio';
-          if (businessMetaEl) businessMetaEl.textContent = 'No se pudo consultar la información del negocio.';
-        }
-      };
-
-      if (serviceName && orderDate && orderTime && clientName) {
-        serviceName.addEventListener('input', updatePreview);
-        orderDate.addEventListener('input', updatePreview);
-        orderTime.addEventListener('input', updatePreview);
-        clientName.addEventListener('input', updatePreview);
+      if (!slug) {
+        setStatus(genStatus, 'Primero genera un link válido.', true);
+        return;
       }
 
-      businessReservationForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (!businessData) {
-          setStatus(reservationStatusEl, 'No se puede enviar la reserva porque el negocio no está disponible.', true);
-          return;
-        }
+      const user = await ensureLoggedIn(authStatusEl);
+      if (!user) return;
 
-        const selectedService = serviceName?.selectedOptions?.[0];
-        const serviceId = selectedService?.value || null;
-        const service = selectedService?.dataset.name || selectedService?.textContent || '';
-        const booking = {
-          business_id: businessData.id,
-          service_id: serviceId,
-          customer_name: clientName?.value.trim() || '',
-          customer_phone: normalizePhone(clientPhone?.value || '') || null,
-          requested_date: orderDate?.value || null,
-          requested_time: orderTime?.value || null,
-          detail: null,
-          status: 'pending'
-        };
-        const message = getReservationMessage({
-          service,
-          date: orderDate?.value || '',
-          time: orderTime?.value || '',
-          client: booking.customer_name
+      try {
+        const { data, error } = await window.SB.saveBusiness({
+          slug_url: slug,
+          name: businessName,
+          whatsapp_phone: document.getElementById('businessPhone')?.value || '',
+          owner_id: user.id,
         });
 
-        setStatus(reservationStatusEl, 'Guardando reserva…');
-        let bookingSaved = true;
-        try {
-          const { error } = await window.SB.createBooking(booking);
-          if (error) throw error;
-        } catch (error) {
-          console.error(error);
-          bookingSaved = false;
-          setStatus(reservationStatusEl, 'No se pudo guardar la reserva, pero puedes enviarla por WhatsApp.', true);
-        } finally {
-          openWhatsAppLink(businessPhone?.value || '', message);
-          if (bookingSaved) {
-            setStatus(reservationStatusEl, 'Reserva preparada. Confirma el envío en WhatsApp.');
-          }
-        }
-      });
+        if (error) throw error;
 
-      if (!orderDate?.value) {
-        orderDate.value = '2026-09-18';
+        setStatus(genStatus, 'Link guardado en Supabase correctamente.');
+        console.log('Business saved:', data);
+      } catch (error) {
+        console.error(error);
+        setStatus(genStatus, 'Error guardando en Supabase. Verifica la tabla `businesses`, la sesión y las políticas.', true);
       }
+    });
+
+    refreshAuthState();
+    window.generateWhatsAppLink = generateWhatsAppLink;
+  }
+
+  async function initializeBusinessPage() {
+    const form = document.getElementById('businessReservationForm');
+    const slug = new URLSearchParams(window.location.search).get('slug');
+
+    if (!form || !slug) {
+      return;
+    }
+
+    try {
+      if (!window.SB) {
+        throw new Error('Supabase no está listo.');
+      }
+
+      const { data: business, error } = await window.SB.getBusinessBySlug(slug);
+      if (error) throw error;
+      if (!business) {
+        document.getElementById('businessName').textContent = 'Negocio no encontrado';
+        document.getElementById('businessMeta').textContent = 'El enlace solicitado no existe o todavía no fue publicado.';
+        document.getElementById('reservationStatus').textContent = 'No hay datos disponibles para este negocio.';
+        return;
+      }
+
+      document.getElementById('businessName').textContent = business.name || 'Mi negocio';
+      document.getElementById('businessMeta').textContent = 'Enviar pedido directo al WhatsApp del negocio.';
+      document.getElementById('businessPhone').value = business.whatsapp_phone || '';
+
+      const serviceSelect = document.getElementById('serviceName');
+      const { data: services, error: servicesError } = await window.SB.getServices(business.id);
+      if (servicesError) throw servicesError;
+
+      serviceSelect.innerHTML = '<option value="">Sin servicio específico</option>' + (services || []).map((service) => `<option value="${service.name}">${service.name}</option>`).join('');
+
+      const preview = document.getElementById('previewMessage');
+      const customerNameInput = document.getElementById('clientName');
+      const orderDateInput = document.getElementById('orderDate');
+      const orderTimeInput = document.getElementById('orderTime');
+      const reservationStatus = document.getElementById('reservationStatus');
+
+      const updatePreview = () => {
+        const payload = {
+          service: serviceSelect.value || 'Sin servicio específico',
+          date: orderDateInput.value || 'Por confirmar',
+          time: orderTimeInput.value || 'Por confirmar',
+          client: customerNameInput.value || 'Cliente',
+          businessName: business.name || 'Mi negocio'
+        };
+        preview.textContent = getReservationMessage(payload);
+      };
+
+      serviceSelect.addEventListener('change', updatePreview);
+      orderDateInput.addEventListener('input', updatePreview);
+      orderTimeInput.addEventListener('input', updatePreview);
+      customerNameInput.addEventListener('input', updatePreview);
       updatePreview();
-      loadBusiness();
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const phone = document.getElementById('businessPhone').value;
+        const message = getReservationMessage({
+          service: serviceSelect.value || 'Sin servicio específico',
+          date: orderDateInput.value || 'Por confirmar',
+          time: orderTimeInput.value || 'Por confirmar',
+          client: customerNameInput.value || 'Cliente',
+          businessName: business.name || 'Mi negocio'
+        });
+
+        reservationStatus.textContent = 'Abriendo WhatsApp con tu reserva...';
+        if (!phone) {
+          reservationStatus.textContent = 'Este negocio no tiene un número de WhatsApp configurado.';
+          return;
+        }
+
+        const cleanPhone = normalizePhone(phone);
+        const encodedMessage = encodeURIComponent(message);
+        window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
+      });
+    } catch (error) {
+      console.error(error);
+      const status = document.getElementById('reservationStatus');
+      const title = document.getElementById('businessName');
+      if (status) status.textContent = 'No se pudo cargar este negocio en este momento.';
+      if (title) title.textContent = 'Error al cargar negocio';
     }
+  }
 
-    window.generateWhatsAppLink = function () {
-      const data = updatePreview();
-      const phone = document.getElementById('businessPhone')?.value || '';
-      if (!phone) {
-        return alert('Necesitas poner un número de WhatsApp del negocio.');
-      }
-
-      const slug = slugify(generatorSlug?.value.trim() || generatorName?.value.trim() || 'mi-negocio');
-      const client = ensureSupabaseReady(genStatus);
-
-      if (client && slug) {
-        client
-          .from('businesses')
-          .upsert([
-            {
-              slug_url: slug,
-              name: generatorName?.value.trim() || 'Mi negocio',
-              whatsapp_phone: normalizePhone(phone)
-            }
-          ], { onConflict: 'slug_url' })
-          .catch((error) => console.warn('No se pudo guardar automáticamente en Supabase:', error.message));
-      }
-
-      openWhatsAppLink(phone, data.message);
-    };
-
-    if (!window.location.pathname.endsWith('business.html')) {
-      setTimeout(() => testSupabaseConnection(), 250);
-    }
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeLandingPage();
+    initializeBusinessPage();
   });
 })();
