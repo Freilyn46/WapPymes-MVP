@@ -332,6 +332,15 @@
       return;
     }
 
+    const setUnavailableState = (titleText, metaText, statusText) => {
+      document.getElementById('businessName').textContent = titleText;
+      document.getElementById('businessMeta').textContent = metaText;
+      document.getElementById('reservationStatus').textContent = statusText;
+      form.querySelectorAll('input, select, button').forEach((control) => {
+        control.disabled = true;
+      });
+    };
+
     try {
       if (!window.SB) {
         throw new Error('Supabase no está listo.');
@@ -340,9 +349,11 @@
       const { data: business, error } = await window.SB.getBusinessBySlug(slug);
       if (error) throw error;
       if (!business) {
-        document.getElementById('businessName').textContent = 'Página no disponible';
-        document.getElementById('businessMeta').textContent = 'Este enlace todavía no está publicado.';
-        document.getElementById('reservationStatus').textContent = 'Vuelve a intentarlo más tarde.';
+        setUnavailableState(
+          'Negocio no encontrado',
+          'Este enlace no corresponde a un negocio publicado.',
+          'Solicita al negocio un enlace actualizado.'
+        );
         return;
       }
 
@@ -427,8 +438,11 @@
       console.error(error);
       const status = document.getElementById('reservationStatus');
       const title = document.getElementById('businessName');
-      if (status) status.textContent = 'Esta página estará disponible en breve.';
-      if (title) title.textContent = 'Página no disponible';
+      if (status) status.textContent = 'No pudimos cargar este negocio. Intenta abrir el enlace nuevamente.';
+      if (title) title.textContent = 'No se pudo cargar el negocio';
+      form.querySelectorAll('input, select, button').forEach((control) => {
+        control.disabled = true;
+      });
     }
   }
 
