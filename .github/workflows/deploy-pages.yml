@@ -40,7 +40,7 @@ jobs:
           npm run build:css
           npm run setup:env
           mkdir _site
-          cp index.html business.html main.js supabase.js config.js _site/
+          cp index.html business.html admin.html main.js admin.js supabase.js config.js _site/
           cp -r dist _site/dist
 
       - name: Upload Pages artifact

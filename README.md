@@ -50,6 +50,12 @@ npm run start
 4. Inserta servicios opcionales en `services`; la página pública los cargará automáticamente.
 5. Completa una reserva: se registra en `bookings` y se abre un mensaje codificado en WhatsApp.
 
+## Panel del negocio
+
+Abre `admin.html` desde el sitio publicado para crear una cuenta e iniciar sesión con Supabase. Desde el panel puedes guardar los datos del negocio, agregar servicios y actualizar el estado de las reservas recibidas.
+
+Ejecuta la sección de cambios de `supabase-schema.sql` en el SQL Editor después de actualizar el esquema para habilitar propietarios y políticas del panel.
+
 ## Publicar con GitHub Pages
 
 El workflow `.github/workflows/deploy-pages.yml` construye y publica el sitio automáticamente cada vez que hay cambios en `main`.
