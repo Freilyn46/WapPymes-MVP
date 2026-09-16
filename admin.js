@@ -14,7 +14,7 @@
   function showStatus(message, error = false) {
     const element = $('appStatus');
     element.textContent = message;
-    element.className = `mb-6 rounded-xl p-3 text-sm ${error ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`;
+    element.className = `mb-6 rounded-xl p-3 text-sm ${error ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`;
   }
 
   function formatDate(value) {
@@ -66,13 +66,19 @@
   async function deleteService(id) {
     if (!confirm('¿Eliminar este servicio?')) return;
     const { error } = await window.supabaseClient.from('services').delete().eq('id', id);
-    if (error) return showStatus(error.message, true);
+    if (error) {
+      console.error(error);
+      return showStatus('No se pudo eliminar el servicio. Inténtalo de nuevo.', true);
+    }
     await loadServices();
   }
 
   async function updateBookingStatus(id, status) {
     const { error } = await window.supabaseClient.from('bookings').update({ status }).eq('id', id);
-    if (error) showStatus(error.message, true);
+    if (error) {
+      console.error(error);
+      showStatus('No se pudo actualizar la reserva. Inténtalo de nuevo.', true);
+    }
   }
 
   function escapeHtml(value) {
@@ -91,7 +97,8 @@
       $('userEmail').textContent = user.email;
       await loadBusiness();
     } catch (error) {
-      showStatus(error.message || 'No se pudo cargar el panel.', true);
+      console.error(error);
+      showStatus('El panel estará disponible en breve. Inténtalo de nuevo más tarde.', true);
     }
   }
 
@@ -113,7 +120,8 @@
         if (signUpMode) showStatus('Cuenta creada. Revisa tu correo si Supabase solicita confirmación.');
         await bootPanel();
       } catch (error) {
-        showStatus(error.message, true);
+        console.error(error);
+        showStatus('No se pudo completar la operación. Revisa tus datos e inténtalo de nuevo.', true);
       }
     });
     $('signOut').addEventListener('click', async () => { await window.SB.signOut(); window.location.reload(); });
@@ -127,13 +135,19 @@
         state.business = data;
         await loadBusiness();
         showStatus('Datos del negocio guardados.');
-      } catch (error) { showStatus(error.message, true); }
+      } catch (error) {
+        console.error(error);
+        showStatus('No se pudieron guardar los datos. Inténtalo de nuevo.', true);
+      }
     });
     $('serviceForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       if (!state.business) return showStatus('Primero guarda los datos del negocio.', true);
       const { error } = await window.supabaseClient.from('services').insert({ business_id: state.business.id, name: $('serviceName').value.trim(), description: $('serviceDescription').value.trim() || null, price: $('servicePrice').value || null, duration_minutes: $('serviceDuration').value || null });
-      if (error) return showStatus(error.message, true);
+      if (error) {
+        console.error(error);
+        return showStatus('No se pudo agregar el servicio. Inténtalo de nuevo.', true);
+      }
       event.target.reset();
       await loadServices();
       showStatus('Servicio agregado.');
