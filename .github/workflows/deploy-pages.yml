@@ -39,11 +39,11 @@ jobs:
         run: |
           npm run build:css
           npm run setup:env
-          test -s config.js
+          test -s runtime-config.js
           mkdir _site
-          cp index.html business.html admin.html main.js admin.js supabase.js config.js _site/
+          cp index.html business.html admin.html main.js admin.js supabase.js runtime-config.js _site/
           touch _site/.nojekyll
-          test -s _site/config.js
+          test -s _site/runtime-config.js
           find _site -maxdepth 2 -type f -print
           cp -r dist _site/dist
 
