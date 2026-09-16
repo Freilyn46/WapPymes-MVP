@@ -1,6 +1,7 @@
 (function () {
   const state = { user: null, business: null };
   const $ = (id) => document.getElementById(id);
+  const REMEMBERED_EMAIL_KEY = 'wappymes.rememberedEmail';
 
   function slugify(value) {
     return String(value || '').normalize('NFKD').toLowerCase().trim()
@@ -113,12 +114,17 @@
       window.SB.init();
       const { data: { user }, error } = await window.SB.getUser();
       if (error && error.message !== 'Auth session missing!') throw error;
-      if (!user) return;
+      if (!user) {
+        $('authView').classList.remove('hidden');
+        $('panelView').classList.add('hidden');
+        return;
+      }
       state.user = user;
       $('authView').classList.add('hidden');
       $('panelView').classList.remove('hidden');
       $('userEmail').textContent = user.email;
       await loadBusiness();
+      showStatus(state.business ? 'Sesión restaurada. Tu panel está listo.' : 'Sesión restaurada. Completa los datos de tu negocio para comenzar.');
     } catch (error) {
       console.error(error);
       showStatus('El panel estará disponible en breve. Inténtalo de nuevo más tarde.', true);
@@ -127,6 +133,11 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     let signUpMode = false;
+    const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+    if (rememberedEmail) {
+      $('authEmail').value = rememberedEmail;
+      $('rememberEmail').checked = true;
+    }
     $('authToggle').addEventListener('click', () => {
       signUpMode = !signUpMode;
       $('authTitle').textContent = signUpMode ? 'Crear cuenta' : 'Iniciar sesión';
@@ -140,6 +151,11 @@
           ? await window.SB.signUp($('authEmail').value, $('authPassword').value)
           : await window.SB.signIn($('authEmail').value, $('authPassword').value);
         if (result.error) throw result.error;
+        if ($('rememberEmail').checked) {
+          localStorage.setItem(REMEMBERED_EMAIL_KEY, $('authEmail').value.trim());
+        } else {
+          localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+        }
         if (!signUpMode && !result.data?.session) {
           showStatus('La sesión no se pudo iniciar. Confirma tu correo si Supabase lo solicita.', true);
           return;
@@ -158,8 +174,15 @@
     $('businessForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       try {
-        const slug = slugify($('businessSlug').value || $('businessName').value);
-        const payload = { owner_id: state.user.id, slug_url: slug, name: $('businessName').value.trim(), whatsapp_phone: cleanPhone($('businessPhone').value), business_description: $('businessDescription').value.trim() };
+        const name = $('businessName').value.trim();
+        const slug = slugify($('businessSlug').value || name);
+        const phone = cleanPhone($('businessPhone').value);
+        if (!state.user || !name || !slug || !phone) {
+          showStatus('Completa el nombre y un WhatsApp válido antes de guardar.', true);
+          return;
+        }
+        $('businessSlug').value = slug;
+        const payload = { owner_id: state.user.id, slug_url: slug, name, whatsapp_phone: phone, business_description: $('businessDescription').value.trim() };
         const { data, error } = await window.supabaseClient.from('businesses').upsert(payload, { onConflict: 'slug_url' }).select().single();
         if (error) throw error;
         state.business = data;
@@ -173,7 +196,9 @@
     $('serviceForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       if (!state.business) return showStatus('Primero guarda los datos del negocio.', true);
-      const { error } = await window.supabaseClient.from('services').insert({ business_id: state.business.id, name: $('serviceName').value.trim(), description: $('serviceDescription').value.trim() || null, price: $('servicePrice').value || null, duration_minutes: $('serviceDuration').value || null });
+      const name = $('serviceName').value.trim();
+      if (!name) return showStatus('Escribe el nombre del servicio.', true);
+      const { error } = await window.supabaseClient.from('services').insert({ business_id: state.business.id, name, description: $('serviceDescription').value.trim() || null, price: $('servicePrice').value || null, duration_minutes: $('serviceDuration').value || null });
       if (error) {
         console.error(error);
         return showStatus('No se pudo agregar el servicio. Inténtalo de nuevo.', true);
