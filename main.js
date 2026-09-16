@@ -19,7 +19,8 @@
   function setStatus(element, message, isError = false) {
     if (!element) return;
     element.textContent = message;
-    element.style.color = isError ? '#dc2626' : '#374151';
+    element.style.color = '#475569';
+    element.dataset.state = isError ? 'notice' : 'ready';
   }
 
   function buildPublicUrl(slug) {
@@ -43,7 +44,7 @@
 
   function ensureSupabaseReady(statusElement = document.getElementById('supabaseStatus')) {
     if (!window.supabase) {
-      setStatus(statusElement, 'La librería de Supabase no cargó correctamente.', true);
+      setStatus(statusElement, 'Estamos preparando la conexión. Inténtalo de nuevo en unos minutos.', true);
       return null;
     }
 
@@ -51,7 +52,7 @@
     const supabaseKey = appConfig.supabaseAnonKey || '';
 
     if (!supabaseUrl || !supabaseKey) {
-      setStatus(statusElement, 'Configura SUPABASE_URL y SUPABASE_ANON_KEY en tu .env y ejecuta npm run setup:env.', true);
+      setStatus(statusElement, 'La conexión estará disponible en breve.', true);
       return null;
     }
 
@@ -61,12 +62,12 @@
       }
     } catch (error) {
       console.error(error);
-      setStatus(statusElement, 'Supabase no se inicializó. Revisa la URL y la clave pública.', true);
+      setStatus(statusElement, 'La conexión estará disponible en breve.', true);
       return null;
     }
 
     if (!window.supabaseClient) {
-      setStatus(statusElement, 'Supabase no se inicializó. Revisa la URL y la clave pública.', true);
+      setStatus(statusElement, 'La conexión estará disponible en breve.', true);
       return null;
     }
 
@@ -79,7 +80,7 @@
 
     const user = window.SB ? await window.SB.getCurrentUser() : await client.auth.getUser().then((res) => res.data?.user ?? null);
     if (!user) {
-      setStatus(statusElement, 'Debes iniciar sesión para guardar o editar negocios.', true);
+      setStatus(statusElement, 'Inicia sesión para guardar los datos del negocio.', true);
       return null;
     }
 
@@ -126,7 +127,8 @@
     try {
       const { data, error } = await window.SB.signUp(email, password);
       if (error) {
-        setStatus(authStatusEl, error.message, true);
+        console.error(error);
+        setStatus(authStatusEl, 'No se pudo completar el registro. Revisa tus datos e inténtalo de nuevo.', true);
         return;
       }
 
@@ -151,7 +153,8 @@
     try {
       const { data, error } = await window.SB.signIn(email, password);
       if (error) {
-        setStatus(authStatusEl, error.message, true);
+        console.error(error);
+        setStatus(authStatusEl, 'No se pudo iniciar sesión. Revisa tus datos e inténtalo de nuevo.', true);
         return;
       }
 
@@ -169,7 +172,8 @@
     try {
       const { error } = await window.SB.signOut();
       if (error) {
-        setStatus(authStatusEl, error.message, true);
+        console.error(error);
+        setStatus(authStatusEl, 'No se pudo cerrar la sesión. Inténtalo de nuevo.', true);
         return;
       }
 
@@ -188,7 +192,7 @@
     try {
       const { data, error } = await client.from('businesses').select('slug_url').limit(1);
       if (error) {
-        setStatus(document.getElementById('supabaseStatus'), 'Conectado a Supabase, pero la tabla `businesses` aún no existe o no tiene permisos.', true);
+        setStatus(document.getElementById('supabaseStatus'), 'El servicio estará disponible en breve.', true);
         console.warn('Supabase connection warning:', error.message);
         return;
       }
@@ -197,7 +201,7 @@
       console.log('Supabase ready:', data);
     } catch (error) {
       console.error(error);
-      setStatus(document.getElementById('supabaseStatus'), 'No se pudo conectar a Supabase.', true);
+      setStatus(document.getElementById('supabaseStatus'), 'El servicio estará disponible en breve.', true);
     }
   }
 
@@ -306,7 +310,7 @@
         console.log('Business saved:', data);
       } catch (error) {
         console.error(error);
-        setStatus(genStatus, 'Error guardando en Supabase. Verifica la tabla `businesses`, la sesión y las políticas.', true);
+        setStatus(genStatus, 'No se pudo guardar ahora. Inténtalo de nuevo en unos minutos.', true);
       }
     });
 
@@ -330,9 +334,9 @@
       const { data: business, error } = await window.SB.getBusinessBySlug(slug);
       if (error) throw error;
       if (!business) {
-        document.getElementById('businessName').textContent = 'Negocio no encontrado';
-        document.getElementById('businessMeta').textContent = 'El enlace solicitado no existe o todavía no fue publicado.';
-        document.getElementById('reservationStatus').textContent = 'No hay datos disponibles para este negocio.';
+        document.getElementById('businessName').textContent = 'Página no disponible';
+        document.getElementById('businessMeta').textContent = 'Este enlace todavía no está publicado.';
+        document.getElementById('reservationStatus').textContent = 'Vuelve a intentarlo más tarde.';
         return;
       }
 
@@ -344,7 +348,12 @@
       const { data: services, error: servicesError } = await window.SB.getServices(business.id);
       if (servicesError) throw servicesError;
 
-      serviceSelect.innerHTML = '<option value="">Sin servicio específico</option>' + (services || []).map((service) => `<option value="${service.name}">${service.name}</option>`).join('');
+      serviceSelect.replaceChildren(new Option('Sin servicio específico', ''));
+      (services || []).forEach((service) => {
+        const option = new Option(service.name, service.id);
+        option.dataset.name = service.name;
+        serviceSelect.append(option);
+      });
 
       const preview = document.getElementById('previewMessage');
       const customerNameInput = document.getElementById('clientName');
@@ -354,7 +363,7 @@
 
       const updatePreview = () => {
         const payload = {
-          service: serviceSelect.value || 'Sin servicio específico',
+          service: serviceSelect.selectedOptions[0]?.dataset.name || 'Sin servicio específico',
           date: orderDateInput.value || 'Por confirmar',
           time: orderTimeInput.value || 'Por confirmar',
           client: customerNameInput.value || 'Cliente',
@@ -369,33 +378,51 @@
       customerNameInput.addEventListener('input', updatePreview);
       updatePreview();
 
-      form.addEventListener('submit', (event) => {
+      form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const phone = document.getElementById('businessPhone').value;
         const message = getReservationMessage({
-          service: serviceSelect.value || 'Sin servicio específico',
+          service: serviceSelect.selectedOptions[0]?.dataset.name || 'Sin servicio específico',
           date: orderDateInput.value || 'Por confirmar',
           time: orderTimeInput.value || 'Por confirmar',
           client: customerNameInput.value || 'Cliente',
           businessName: business.name || 'Mi negocio'
         });
 
-        reservationStatus.textContent = 'Abriendo WhatsApp con tu reserva...';
+        reservationStatus.textContent = 'Preparando tu reserva...';
         if (!phone) {
-          reservationStatus.textContent = 'Este negocio no tiene un número de WhatsApp configurado.';
+          reservationStatus.textContent = 'Este negocio aún no tiene reservas habilitadas.';
           return;
+        }
+
+        const booking = {
+          business_id: business.id,
+          service_id: serviceSelect.value || null,
+          customer_name: customerNameInput.value.trim(),
+          customer_phone: normalizePhone(document.getElementById('clientPhone')?.value || '') || null,
+          requested_date: orderDateInput.value || null,
+          requested_time: orderTimeInput.value || null,
+          detail: null,
+          status: 'pending'
+        };
+        try {
+          const { error: bookingError } = await window.SB.createBooking(booking);
+          if (bookingError) throw bookingError;
+        } catch (bookingError) {
+          console.error(bookingError);
         }
 
         const cleanPhone = normalizePhone(phone);
         const encodedMessage = encodeURIComponent(message);
         window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
+        reservationStatus.textContent = 'Reserva preparada. Confirma el envío en WhatsApp.';
       });
     } catch (error) {
       console.error(error);
       const status = document.getElementById('reservationStatus');
       const title = document.getElementById('businessName');
-      if (status) status.textContent = 'No se pudo cargar este negocio en este momento.';
-      if (title) title.textContent = 'Error al cargar negocio';
+      if (status) status.textContent = 'Esta página estará disponible en breve.';
+      if (title) title.textContent = 'Página no disponible';
     }
   }
 
