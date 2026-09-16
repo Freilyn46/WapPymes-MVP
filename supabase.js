@@ -1,7 +1,8 @@
 // Cliente de Supabase para uso en navegador.
 (function () {
-  const DEFAULT_URL = 'https://wolhwrptaiuzqranmtrc.supabase.co';
-  const DEFAULT_ANON_KEY = 'sb_publishable_y9FmMk1GpClKWSdhmqxqzQ_NgGD23ky';
+  const appConfig = window.APP_CONFIG || {};
+  const DEFAULT_URL = appConfig.supabaseUrl || '';
+  const DEFAULT_ANON_KEY = appConfig.supabaseAnonKey || '';
 
   function init(url = DEFAULT_URL, key = DEFAULT_ANON_KEY) {
     if (!window.supabase) {
@@ -9,7 +10,7 @@
     }
 
     if (!url || !key) {
-      throw new Error('Supabase URL y ANON KEY requeridos');
+      throw new Error('Configura SUPABASE_URL y SUPABASE_ANON_KEY en tu .env y ejecuta npm run setup:env');
     }
 
     window.supabaseClient = window.supabase.createClient(url, key);
@@ -48,5 +49,29 @@
       .maybeSingle();
   }
 
-  window.SB = { init, signUp, signIn, signOut, saveBusiness, getBusinessBySlug };
+  async function getServices(businessId) {
+    if (!window.supabaseClient) init();
+    return await window.supabaseClient
+      .from('services')
+      .select('id, name, description, price, duration_minutes')
+      .eq('business_id', businessId)
+      .eq('active', true)
+      .order('created_at', { ascending: true });
+  }
+
+  async function createBooking(booking) {
+    if (!window.supabaseClient) init();
+    return await window.supabaseClient.from('bookings').insert(booking);
+  }
+
+  window.SB = {
+    init,
+    signUp,
+    signIn,
+    signOut,
+    saveBusiness,
+    getBusinessBySlug,
+    getServices,
+    createBooking
+  };
 })();
