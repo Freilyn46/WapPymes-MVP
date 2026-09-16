@@ -27,6 +27,10 @@
       <form id="authForm" class="mt-6 space-y-4">
         <input id="authEmail" type="email" required placeholder="Correo" class="w-full rounded-xl border border-slate-300 px-4 py-3">
         <input id="authPassword" type="password" required minlength="6" placeholder="Contraseña (mínimo 6 caracteres)" class="w-full rounded-xl border border-slate-300 px-4 py-3">
+        <label class="flex items-center gap-2 text-sm text-slate-600">
+          <input id="rememberEmail" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600">
+          Recordar mi correo en este dispositivo
+        </label>
         <button id="authSubmit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white hover:bg-emerald-700">Iniciar sesión</button>
       </form>
       <button id="authToggle" class="mt-4 w-full text-sm text-slate-500 hover:text-slate-800">¿No tienes cuenta? Crear una</button>
