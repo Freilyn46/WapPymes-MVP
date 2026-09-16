@@ -28,7 +28,7 @@ APP_BASE_URL=http://localhost:8000
 npm run dev
 ```
 
-El comando genera automáticamente `config.js` (ignorado por git) y abre el servidor en http://localhost:8000. Para una versión estática compilada:
+El comando genera automáticamente `runtime-config.js` (ignorado por git) y abre el servidor en http://localhost:8000. Para una versión estática compilada:
 
 ```bash
 npm run build:css
@@ -73,4 +73,4 @@ Después, en **Settings → Pages**, selecciona **GitHub Actions** como fuente d
 https://freilyn46.github.io/WapPymes-MVP/
 ```
 
-La configuración de Supabase se genera durante el workflow y no se guarda en el repositorio. No uses nunca una `SUPABASE_SERVICE_ROLE_KEY` en el frontend.
+La configuración de Supabase se genera como `runtime-config.js` durante el workflow y no se guarda en el repositorio. No uses nunca una `SUPABASE_SERVICE_ROLE_KEY` en el frontend.

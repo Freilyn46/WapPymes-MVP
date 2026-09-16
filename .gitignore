@@ -1,4 +1,5 @@
 .env
 config.js
+runtime-config.js
 node_modules/
 dist/
