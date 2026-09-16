@@ -1,17 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WapPymes - Automatización de Citas y Pedidos por WhatsApp</title>
-    <!-- Tailwind CDN para estilo inmediato (puedes quitarlo al compilar Tailwind localmente) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="config.js"></script>
     <link rel="stylesheet" href="dist/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-50 font-sans text-slate-800">
 
-    <!-- HEADER / HERO -->
     <header class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between">
             <div class="md:w-1/2 mb-8 md:mb-0">
@@ -46,7 +45,6 @@
         </div>
     </header>
 
-    <!-- SECCIÓN: CÓMO FUNCIONA -->
     <section class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
             <h2 class="text-3xl font-bold text-slate-900">¿Cómo Funciona el MVP?</h2>
@@ -71,7 +69,6 @@
         </div>
     </section>
 
-    <!-- SECCIÓN: SUPABASE Y LINK PERSONALIZADO -->
     <section id="supabase-panel" class="py-10 bg-white border-b border-slate-200">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
@@ -89,7 +86,7 @@
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-8">
                 <h2 class="text-2xl font-bold text-slate-900">Generador de Link Personalizado</h2>
-                <p class="text-slate-600 mt-2">Crea un enlace corto y fácil de compartir para tu negocio (ej. wappymes.com/tu-negocio).</p>
+                <p class="text-slate-600 mt-2">Crea un enlace corto y fácil de compartir para tu negocio.</p>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -113,19 +110,18 @@
 
                 <div class="mt-4 p-4 bg-slate-100 rounded-lg border border-slate-200">
                     <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Enlace generado</p>
-                    <div class="flex items-center justify-between">
-                        <a id="generatedLink" class="text-emerald-700 break-words" href="#">https://wappymes.com/tu-negocio</a>
+                    <div class="flex items-center justify-between gap-3">
+                        <a id="generatedLink" class="text-emerald-700 break-words" href="business.html?slug=demo-negocio">business.html?slug=demo-negocio</a>
                         <div class="flex items-center gap-2">
                             <button id="copyLinkBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded">Copiar</button>
                         </div>
                     </div>
-                    <p class="mt-2 text-xs text-slate-500">Nota: para persistir el slug, la tabla `businesses` debe existir en Supabase con una columna `slug_url` y `name`.</p>
+                    <p class="mt-2 text-xs text-slate-500">Nota: para persistir el slug, configura tu `.env` y crea la tabla `businesses` en Supabase.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- SECCIÓN: SIMULADOR INTERACTIVO (DEMO FUNCIONAL) -->
     <section id="demo" class="py-16 bg-emerald-900 text-white">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-10">
@@ -174,7 +170,6 @@
                     </div>
                 </form>
 
-                <!-- Vista previa del mensaje generado -->
                 <div class="mt-8 bg-slate-100 p-4 rounded-xl border border-slate-200">
                     <p class="text-xs font-bold text-slate-500 uppercase mb-1">Mensaje estructurado que se enviará:</p>
                     <pre id="previewMessage" class="text-xs text-slate-700 whitespace-pre-wrap bg-white p-3 rounded border border-slate-200 font-mono"></pre>
@@ -183,25 +178,22 @@
         </div>
     </section>
 
-    <!-- SOBRE EL DESARROLLADOR / CONTACTO -->
     <section id="contacto" class="py-16 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 class="text-3xl font-bold text-slate-900 mb-4">Sobre el Creador</h2>
         <p class="text-slate-600 max-w-xl mx-auto mb-8">Hola, soy <strong>Freilyn</strong>. Estoy desarrollando este MVP escalable utilizando tecnologías modernas (Frontend con Next.js/Vue/Tailwind, Backend Node/Python y bases de datos Supabase).</p>
-        
+
         <div class="inline-block bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <p class="text-slate-700 font-medium">¿Interesado en probar la plataforma para tu PYME?</p>
-            <a href="mailto:tuemail@email.com" class="inline-block mt-3 text-emerald-600 font-bold hover:underline">
+            <a href="mailto:freilynhernandes472@gmail.com" class="inline-block mt-3 text-emerald-600 font-bold hover:underline">
                 <i class="fa-solid fa-envelope mr-2"></i>freilynhernandes472@gmail.com
             </a>
         </div>
     </section>
 
-    <!-- FOOTER -->
     <footer class="bg-slate-900 text-slate-400 py-6 text-center text-sm">
         <p>&copy; 2026 Freilyn. Todos los derechos reservados. Plataforma de automatización de citas y pedidos para PYMES.</p>
     </footer>
 
-    <!-- SCRIPT DE LÓGICA WHATSAPP -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
     <script src="main.js"></script>

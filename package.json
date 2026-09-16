@@ -6,8 +6,9 @@
   "scripts": {
     "build:css": "npx tailwindcss -i ./Global.css -o ./dist/styles.css --minify",
     "watch:css": "npx tailwindcss -i ./Global.css -o ./dist/styles.css --watch",
-    "dev": "python -m http.server 8000",
-    "start": "python -m http.server 8000"
+    "setup:env": "node scripts/setup-config.mjs",
+    "dev": "node scripts/setup-config.mjs && python -m http.server 8000",
+    "start": "node scripts/setup-config.mjs && python -m http.server 8000"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4"
