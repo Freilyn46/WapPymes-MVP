@@ -14,7 +14,25 @@
   function showStatus(message, error = false) {
     const element = $('appStatus');
     element.textContent = message;
+    element.classList.remove('hidden');
     element.className = `mb-6 rounded-xl p-3 text-sm ${error ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'}`;
+  }
+
+  function authMessage(error) {
+    const message = String(error?.message || '').toLowerCase();
+    if (message.includes('invalid login credentials')) {
+      return 'El correo o la contraseña no son correctos.';
+    }
+    if (message.includes('email not confirmed')) {
+      return 'Confirma tu correo desde el mensaje enviado por Supabase y vuelve a intentarlo.';
+    }
+    if (message.includes('too many requests')) {
+      return 'Se alcanzó el límite temporal de intentos. Espera unos minutos y vuelve a intentarlo.';
+    }
+    if (message.includes('user already registered')) {
+      return 'Este correo ya tiene una cuenta. Inicia sesión en lugar de registrarte.';
+    }
+    return 'No se pudo completar la operación. Revisa la configuración y tus datos.';
   }
 
   function formatDate(value) {
@@ -122,11 +140,18 @@
           ? await window.SB.signUp($('authEmail').value, $('authPassword').value)
           : await window.SB.signIn($('authEmail').value, $('authPassword').value);
         if (result.error) throw result.error;
-        if (signUpMode) showStatus('Cuenta creada. Revisa tu correo si Supabase solicita confirmación.');
+        if (!signUpMode && !result.data?.session) {
+          showStatus('La sesión no se pudo iniciar. Confirma tu correo si Supabase lo solicita.', true);
+          return;
+        }
+        if (signUpMode && !result.data?.session) {
+          showStatus('Cuenta creada. Confirma tu correo desde el mensaje de Supabase y luego inicia sesión.');
+          return;
+        }
         await bootPanel();
       } catch (error) {
         console.error(error);
-        showStatus('No se pudo completar la operación. Revisa tus datos e inténtalo de nuevo.', true);
+        showStatus(authMessage(error), true);
       }
     });
     $('signOut').addEventListener('click', async () => { await window.SB.signOut(); window.location.reload(); });
