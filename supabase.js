@@ -13,7 +13,10 @@
       throw new Error('Configura SUPABASE_URL y SUPABASE_ANON_KEY en tu .env y ejecuta npm run setup:env');
     }
 
-    window.supabaseClient = window.supabase.createClient(url, key);
+    if (!window.supabaseClient) {
+      window.supabaseClient = window.supabase.createClient(url, key);
+    }
+
     return window.supabaseClient;
   }
 
@@ -37,11 +40,18 @@
     return await window.supabaseClient.auth.getUser();
   }
 
-  async function saveBusiness({ slug_url, name, whatsapp_phone }) {
+  async function getCurrentUser() {
+    if (!window.supabaseClient) init();
+    const { data: { user }, error } = await window.supabaseClient.auth.getUser();
+    if (error) return null;
+    return user;
+  }
+
+  async function saveBusiness({ slug_url, name, whatsapp_phone, owner_id }) {
     if (!window.supabaseClient) init();
     return await window.supabaseClient
       .from('businesses')
-      .upsert([{ slug_url, name, whatsapp_phone }], { onConflict: 'slug_url' })
+      .upsert([{ slug_url, name, whatsapp_phone, owner_id }], { onConflict: 'slug_url' })
       .select();
   }
 
@@ -60,7 +70,6 @@
       .from('services')
       .select('id, name, description, price, duration_minutes')
       .eq('business_id', businessId)
-      .eq('active', true)
       .order('created_at', { ascending: true });
   }
 
@@ -75,6 +84,7 @@
     signIn,
     signOut,
     getUser,
+    getCurrentUser,
     saveBusiness,
     getBusinessBySlug,
     getServices,
