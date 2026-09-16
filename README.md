@@ -49,3 +49,22 @@ npm run start
 3. Abre el enlace generado (`business.html?slug=tu-negocio`) para probar la lectura por slug.
 4. Inserta servicios opcionales en `services`; la página pública los cargará automáticamente.
 5. Completa una reserva: se registra en `bookings` y se abre un mensaje codificado en WhatsApp.
+
+## Publicar con GitHub Pages
+
+El workflow `.github/workflows/deploy-pages.yml` construye y publica el sitio automáticamente cada vez que hay cambios en `main`.
+
+Antes de activar Pages, crea estos secretos en **Settings → Secrets and variables → Actions**:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+```
+
+Después, en **Settings → Pages**, selecciona **GitHub Actions** como fuente de despliegue. La aplicación quedará disponible en:
+
+```text
+https://freilyn46.github.io/WapPymes-MVP/
+```
+
+La configuración de Supabase se genera durante el workflow y no se guarda en el repositorio. No uses nunca una `SUPABASE_SERVICE_ROLE_KEY` en el frontend.
