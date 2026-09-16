@@ -41,6 +41,7 @@ npm run start
 - Lectura por slug desde la página pública
 - Envío de reserva al WhatsApp del negocio
 - Carga de variables de entorno sin claves hardcodeadas
+- Bot de WhatsApp Cloud API mediante Supabase Edge Functions
 
 ## Supabase
 
@@ -74,3 +75,11 @@ https://freilyn46.github.io/WapPymes-MVP/
 ```
 
 La configuración de Supabase se genera como `runtime-config.js` durante el workflow y no se guarda en el repositorio. No uses nunca una `SUPABASE_SERVICE_ROLE_KEY` en el frontend.
+
+## Bot automático de WhatsApp
+
+La función `supabase/functions/whatsapp-bot` recibe mensajes de WhatsApp Cloud API,
+crea la reserva inmediatamente en `bookings` y responde al cliente. Requiere
+crear una cuenta de WhatsApp Business en Meta, desplegar la función con la CLI
+de Supabase y configurar sus secretos. La guía completa está en
+`supabase/functions/whatsapp-bot/README.md`.
