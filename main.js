@@ -8,6 +8,7 @@
   function slugify(text) {
     return String(text || '')
       .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, '-')
@@ -207,7 +208,7 @@
 
   function generateWhatsAppLink() {
     const phone = document.getElementById('businessPhone')?.value || '';
-    const service = document.getElementById('serviceName')?.value || 'Servicio';
+    const service = document.getElementById('serviceName')?.selectedOptions?.[0]?.textContent || 'Servicio';
     const date = document.getElementById('orderDate')?.value || '';
     const time = document.getElementById('orderTime')?.value || '';
     const client = document.getElementById('clientName')?.value || 'Cliente';
@@ -219,7 +220,7 @@
 
     const cleanPhone = normalizePhone(phone);
     if (!cleanPhone) {
-      alert('Necesitas poner un número de WhatsApp del negocio.');
+      setStatus(document.getElementById('genStatus'), 'Escribe un número de WhatsApp válido para continuar.', true);
       return;
     }
 
@@ -242,6 +243,7 @@
     const copyLinkBtn = document.getElementById('copyLinkBtn');
     const saveLinkBtn = document.getElementById('saveLinkBtn');
     const genStatus = document.getElementById('genStatus');
+    const orderForm = document.getElementById('orderForm');
 
     if (!supabaseStatusEl && !authStatusEl && !generateBtn && !saveLinkBtn) {
       return;
@@ -251,6 +253,10 @@
     if (signUpBtn) signUpBtn.addEventListener('click', signUp);
     if (signInBtn) signInBtn.addEventListener('click', signIn);
     if (signOutBtn) signOutBtn.addEventListener('click', signOut);
+    orderForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      generateWhatsAppLink();
+    });
 
     generateBtn?.addEventListener('click', () => {
       const name = generatorName?.value.trim() || '';
@@ -314,7 +320,7 @@
       }
     });
 
-    refreshAuthState();
+    refreshAuthState().catch((error) => console.error(error));
     window.generateWhatsAppLink = generateWhatsAppLink;
   }
 
