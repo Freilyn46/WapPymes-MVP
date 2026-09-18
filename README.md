@@ -28,7 +28,7 @@ APP_BASE_URL=http://localhost:8000
 npm run dev
 ```
 
-El comando genera automáticamente `config.js` (ignorado por git) y abre el servidor en http://localhost:8000. Para una versión estática compilada:
+El comando genera automáticamente `app-config.js` (ignorado por git) y abre el servidor en http://localhost:8000. Para una versión estática compilada:
 
 ```bash
 npm run build:css
@@ -41,6 +41,7 @@ npm run start
 - Lectura por slug desde la página pública
 - Envío de reserva al WhatsApp del negocio
 - Carga de variables de entorno sin claves hardcodeadas
+- Bot de WhatsApp Cloud API mediante Supabase Edge Functions
 
 ## Supabase
 
@@ -75,4 +76,12 @@ Después, en **Settings → Pages**, selecciona **GitHub Actions** como fuente d
 https://freilyn46.github.io/WapPymes-MVP/
 ```
 
-La configuración de Supabase se genera durante el workflow y no se guarda en el repositorio. No uses nunca una `SUPABASE_SERVICE_ROLE_KEY` en el frontend.
+La configuración de Supabase se genera como `app-config.js` durante el workflow y no se guarda en el repositorio. No uses nunca una `SUPABASE_SERVICE_ROLE_KEY` en el frontend.
+
+## Bot automático de WhatsApp
+
+La función `supabase/functions/whatsapp-bot` recibe mensajes de WhatsApp Cloud API,
+crea la reserva inmediatamente en `bookings` y responde al cliente. Requiere
+crear una cuenta de WhatsApp Business en Meta, desplegar la función con la CLI
+de Supabase y configurar sus secretos. La guía completa está en
+`supabase/functions/whatsapp-bot/README.md`.

@@ -1,6 +1,7 @@
 (function () {
   const state = { user: null, business: null };
   const $ = (id) => document.getElementById(id);
+  const REMEMBERED_EMAIL_KEY = 'wappymes.rememberedEmail';
 
   function slugify(value) {
     return String(value || '').normalize('NFKD').toLowerCase().trim()
@@ -28,7 +29,17 @@
     }
 
     element.textContent = message;
+    element.classList.remove('hidden');
     element.className = 'mb-6 rounded-xl p-3 text-sm bg-emerald-100 text-emerald-700';
+  }
+
+  function authMessage(error) {
+    const message = String(error?.message || '').toLowerCase();
+    if (message.includes('invalid login credentials')) return 'El correo o la contraseña no son correctos.';
+    if (message.includes('email not confirmed')) return 'Confirma tu correo desde el mensaje enviado por Supabase y vuelve a intentarlo.';
+    if (message.includes('too many requests')) return 'Se alcanzó el límite temporal de intentos. Espera unos minutos y vuelve a intentarlo.';
+    if (message.includes('user already registered')) return 'Este correo ya tiene una cuenta. Inicia sesión en lugar de registrarte.';
+    return 'No se pudo completar la operación. Revisa la configuración y tus datos.';
   }
 
   function formatDate(value) {
@@ -44,7 +55,12 @@
     if (error) throw error;
     const data = businesses?.[0] || null;
     state.business = data;
-    if (!data) return;
+    if (!data) {
+      $('publicLink').textContent = 'Guarda los datos del negocio para publicar tu página.';
+      $('servicesList').innerHTML = '<p class="text-sm text-slate-500">Guarda primero el negocio para agregar servicios.</p>';
+      $('bookingsList').innerHTML = '<p class="text-sm text-slate-500">Las reservas aparecerán aquí después de publicar el negocio.</p>';
+      return;
+    }
     $('businessName').value = data.name || '';
     $('businessSlug').value = data.slug_url || '';
     $('businessPhone').value = data.whatsapp_phone || '';
@@ -85,13 +101,19 @@
   async function deleteService(id) {
     if (!confirm('¿Eliminar este servicio?')) return;
     const { error } = await window.supabaseClient.from('services').delete().eq('id', id);
-    if (error) return showStatus(error.message, true);
+    if (error) {
+      console.error(error);
+      return showStatus('No se pudo eliminar el servicio. Inténtalo de nuevo.', true);
+    }
     await loadServices();
   }
 
   async function updateBookingStatus(id, status) {
     const { error } = await window.supabaseClient.from('bookings').update({ status }).eq('id', id);
-    if (error) showStatus(error.message, true);
+    if (error) {
+      console.error(error);
+      showStatus('No se pudo actualizar la reserva. Inténtalo de nuevo.', true);
+    }
   }
 
   function escapeHtml(value) {
@@ -102,20 +124,31 @@
     try {
       window.SB.init();
       const { data: { user }, error } = await window.SB.getUser();
-      if (error) throw error;
-      if (!user) return;
+      if (error && error.message !== 'Auth session missing!') throw error;
+      if (!user) {
+        $('authView').classList.remove('hidden');
+        $('panelView').classList.add('hidden');
+        return;
+      }
       state.user = user;
       $('authView').classList.add('hidden');
       $('panelView').classList.remove('hidden');
       $('userEmail').textContent = user.email;
       await loadBusiness();
+      showStatus(state.business ? 'Sesión restaurada. Tu panel está listo.' : 'Sesión restaurada. Completa los datos de tu negocio para comenzar.');
     } catch (error) {
-      showStatus(error.message || 'No se pudo cargar el panel.', true);
+      console.error(error);
+      showStatus('El panel estará disponible en breve. Inténtalo de nuevo más tarde.', true);
     }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     let signUpMode = false;
+    const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+    if (rememberedEmail) {
+      $('authEmail').value = rememberedEmail;
+      $('rememberEmail').checked = true;
+    }
     $('authToggle').addEventListener('click', () => {
       signUpMode = !signUpMode;
       $('authTitle').textContent = signUpMode ? 'Crear cuenta' : 'Iniciar sesión';
@@ -129,10 +162,23 @@
           ? await window.SB.signUp($('authEmail').value, $('authPassword').value)
           : await window.SB.signIn($('authEmail').value, $('authPassword').value);
         if (result.error) throw result.error;
-        if (signUpMode) showStatus('Cuenta creada. Revisa tu correo si Supabase solicita confirmación.');
+        if ($('rememberEmail').checked) {
+          localStorage.setItem(REMEMBERED_EMAIL_KEY, $('authEmail').value.trim());
+        } else {
+          localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+        }
+        if (!signUpMode && !result.data?.session) {
+          showStatus('La sesión no se pudo iniciar. Confirma tu correo si Supabase lo solicita.', true);
+          return;
+        }
+        if (signUpMode && !result.data?.session) {
+          showStatus('Cuenta creada. Confirma tu correo desde el mensaje de Supabase y luego inicia sesión.');
+          return;
+        }
         await bootPanel();
       } catch (error) {
-        showStatus(error.message, true);
+        console.error(error);
+        showStatus(authMessage(error), true);
       }
     });
     $('signOut').addEventListener('click', async () => { await window.SB.signOut(); window.location.reload(); });
@@ -171,7 +217,12 @@
       await loadServices();
       showStatus('Servicio agregado.');
     });
-    $('refreshBookings').addEventListener('click', loadBookings);
+    $('refreshBookings').addEventListener('click', () => {
+      loadBookings().catch((error) => {
+        console.error(error);
+        showStatus('No se pudieron actualizar las reservas.', true);
+      });
+    });
     bootPanel();
   });
 })();

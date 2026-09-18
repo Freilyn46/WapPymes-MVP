@@ -89,6 +89,7 @@
       .from('services')
       .select('id, name, description, price, duration_minutes')
       .eq('business_id', businessId)
+      .eq('active', true)
       .order('created_at', { ascending: true });
   }
 
