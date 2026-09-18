@@ -2,7 +2,9 @@
   const appConfig = window.APP_CONFIG || {};
 
   function normalizePhone(phone) {
-    return String(phone || '').replace(/\D/g, '');
+    const normalized = String(phone || '').replace(/\D/g, '');
+    if (/^(809|829|849)\d{7}$/.test(normalized)) return `1${normalized}`;
+    return normalized;
   }
 
   function slugify(text) {
@@ -18,8 +20,19 @@
 
   function setStatus(element, message, isError = false) {
     if (!element) return;
+
+    if (isError) {
+      element.textContent = message || 'Ocurrió un error. Inténtalo de nuevo.';
+      element.style.display = 'block';
+      element.hidden = false;
+      element.style.color = '#991b1b';
+      return;
+    }
+
     element.textContent = message;
-    element.style.color = isError ? '#dc2626' : '#374151';
+    element.style.display = 'block';
+    element.hidden = false;
+    element.style.color = '#374151';
   }
 
   function buildPublicUrl(slug) {
@@ -28,15 +41,31 @@
     return baseUrl.toString();
   }
 
-  function getReservationMessage({ service, date, time, client, businessName }) {
+  function isValidWhatsAppPhone(phone) {
+    return /^\d{11,15}$/.test(phone);
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[character]));
+  }
+
+  function getReservationMessage({ service, date, time, client, customerPhone, detail, businessName }) {
     const lines = [
       'Hola! Quisiera realizar la siguiente reserva:',
       '',
       `Negocio: ${businessName || 'Mi negocio'}`,
       `Servicio: ${service || 'Sin servicio específico'}`,
-      `Fecha: ${date || 'Por confirmar'}`,
-      `Hora: ${time || 'Por confirmar'}`,
-      `Cliente: ${client || 'Cliente'}`
+      `Cliente: ${client || 'Cliente'}`,
+      `Teléfono: ${customerPhone || 'No indicado'}`,
+      `Mensaje: ${detail || 'Solicita información sobre una reserva.'}`,
+      ...(date ? [`Fecha preferida: ${date}`] : []),
+      ...(time ? [`Hora preferida: ${time}`] : [])
     ];
     return lines.join('\n');
   }
@@ -110,7 +139,19 @@
     const statusElement = document.getElementById('authStatus');
     const user = window.SB ? await window.SB.getCurrentUser() : null;
     updateAuthUI(user);
-    setStatus(statusElement, user ? `Sesión activa: ${user.email}` : 'No has iniciado sesión todavía.');
+    if (user) {
+      setStatus(statusElement, `Sesión activa: ${user.email}`);
+      return;
+    }
+
+    const session = window.SB ? await window.SB.getSession() : null;
+    if (session?.user) {
+      updateAuthUI(session.user);
+      setStatus(statusElement, `Sesión restaurada: ${session.user.email}`);
+      return;
+    }
+
+    setStatus(statusElement, 'No has iniciado sesión todavía.');
   }
 
   async function signUp() {
@@ -237,6 +278,7 @@
     const generatedLink = document.getElementById('generatedLink');
     const copyLinkBtn = document.getElementById('copyLinkBtn');
     const saveLinkBtn = document.getElementById('saveLinkBtn');
+    const generatorPhone = document.getElementById('generatorPhone');
     const genStatus = document.getElementById('genStatus');
 
     if (!supabaseStatusEl && !authStatusEl && !generateBtn && !saveLinkBtn) {
@@ -262,13 +304,15 @@
       if (generatedLink) {
         generatedLink.href = url;
         generatedLink.textContent = url;
+        generatedLink.dataset.generated = 'true';
+        generatedLink.removeAttribute('aria-disabled');
       }
       setStatus(genStatus, 'Link generado. Inicia sesión para guardarlo en Supabase.');
     });
 
     copyLinkBtn?.addEventListener('click', async () => {
       try {
-        if (!generatedLink?.href) {
+        if (!generatedLink?.dataset.generated) {
           setStatus(genStatus, 'Primero genera un enlace válido.', true);
           return;
         }
@@ -283,9 +327,14 @@
     saveLinkBtn?.addEventListener('click', async () => {
       const slug = slugify(generatorSlug?.value.trim() || generatorName?.value.trim() || '');
       const businessName = generatorName?.value.trim() || 'Mi negocio';
+      const whatsappPhone = normalizePhone(generatorPhone?.value || '');
 
       if (!slug) {
         setStatus(genStatus, 'Primero genera un link válido.', true);
+        return;
+      }
+      if (!businessName || !isValidWhatsAppPhone(whatsappPhone)) {
+        setStatus(genStatus, 'Escribe el nombre y un WhatsApp válido con código de país.', true);
         return;
       }
 
@@ -296,7 +345,7 @@
         const { data, error } = await window.SB.saveBusiness({
           slug_url: slug,
           name: businessName,
-          whatsapp_phone: document.getElementById('businessPhone')?.value || '',
+          whatsapp_phone: whatsappPhone,
           owner_id: user.id,
         });
 
@@ -337,58 +386,105 @@
       }
 
       document.getElementById('businessName').textContent = business.name || 'Mi negocio';
-      document.getElementById('businessMeta').textContent = 'Enviar pedido directo al WhatsApp del negocio.';
+      document.getElementById('businessMeta').textContent = 'Elige tu servicio, fecha y hora. Registraremos tu cita y enviaremos el mensaje por WhatsApp.';
       document.getElementById('businessPhone').value = business.whatsapp_phone || '';
 
       const serviceSelect = document.getElementById('serviceName');
       const { data: services, error: servicesError } = await window.SB.getServices(business.id);
       if (servicesError) throw servicesError;
 
-      serviceSelect.innerHTML = '<option value="">Sin servicio específico</option>' + (services || []).map((service) => `<option value="${service.name}">${service.name}</option>`).join('');
+      serviceSelect.innerHTML = '<option value="">Sin servicio específico</option>' + (services || []).map((service) => `<option value="${service.id}">${escapeHtml(service.name)}</option>`).join('');
 
       const preview = document.getElementById('previewMessage');
       const customerNameInput = document.getElementById('clientName');
+      const customerPhoneInput = document.getElementById('clientPhone');
       const orderDateInput = document.getElementById('orderDate');
       const orderTimeInput = document.getElementById('orderTime');
+      const customerMessageInput = document.getElementById('clientMessage');
       const reservationStatus = document.getElementById('reservationStatus');
 
+      const today = new Date();
+      const localDate = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+      orderDateInput.min = localDate;
+
       const updatePreview = () => {
+        const selectedService = services?.find((service) => String(service.id) === serviceSelect.value);
         const payload = {
-          service: serviceSelect.value || 'Sin servicio específico',
+          service: selectedService?.name || 'Sin servicio específico',
+          client: customerNameInput.value || 'Cliente',
+          customerPhone: customerPhoneInput.value || 'No indicado',
           date: orderDateInput.value || 'Por confirmar',
           time: orderTimeInput.value || 'Por confirmar',
-          client: customerNameInput.value || 'Cliente',
+          detail: customerMessageInput.value || '',
           businessName: business.name || 'Mi negocio'
         };
         preview.textContent = getReservationMessage(payload);
       };
 
       serviceSelect.addEventListener('change', updatePreview);
+      customerNameInput.addEventListener('input', updatePreview);
+      customerPhoneInput.addEventListener('input', updatePreview);
       orderDateInput.addEventListener('input', updatePreview);
       orderTimeInput.addEventListener('input', updatePreview);
-      customerNameInput.addEventListener('input', updatePreview);
+      customerMessageInput.addEventListener('input', updatePreview);
       updatePreview();
 
-      form.addEventListener('submit', (event) => {
+      form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const phone = document.getElementById('businessPhone').value;
+        const selectedService = services?.find((service) => String(service.id) === serviceSelect.value);
+        const customerName = customerNameInput.value.trim();
+        const customerPhone = normalizePhone(customerPhoneInput.value);
         const message = getReservationMessage({
-          service: serviceSelect.value || 'Sin servicio específico',
-          date: orderDateInput.value || 'Por confirmar',
-          time: orderTimeInput.value || 'Por confirmar',
-          client: customerNameInput.value || 'Cliente',
+          service: selectedService?.name || 'Sin servicio específico',
+          date: orderDateInput.value,
+          time: orderTimeInput.value,
+          client: customerName || 'Cliente',
+          customerPhone,
+          detail: customerMessageInput.value.trim(),
           businessName: business.name || 'Mi negocio'
         });
 
-        reservationStatus.textContent = 'Abriendo WhatsApp con tu reserva...';
-        if (!phone) {
-          reservationStatus.textContent = 'Este negocio no tiene un número de WhatsApp configurado.';
+        if (!customerName || !customerPhone || !orderDateInput.value || !orderTimeInput.value) {
+          reservationStatus.textContent = 'Completa nombre, teléfono, fecha y hora antes de continuar.';
+          return;
+        }
+        if (!/^\d{10,15}$/.test(customerPhone)) {
+          reservationStatus.textContent = 'Escribe un teléfono válido con código de país.';
           return;
         }
 
         const cleanPhone = normalizePhone(phone);
+        if (!isValidWhatsAppPhone(cleanPhone)) {
+          reservationStatus.textContent = 'Este negocio no tiene un número de WhatsApp configurado.';
+          return;
+        }
+
+        const whatsappWindow = window.open('about:blank', '_blank');
+        reservationStatus.textContent = 'Guardando tu reserva...';
+        const { error: bookingError } = await window.SB.createBooking({
+          business_id: business.id,
+          service_id: selectedService?.id || null,
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          requested_date: orderDateInput.value,
+          requested_time: orderTimeInput.value,
+          detail: message,
+        });
+        if (bookingError) {
+          console.error(bookingError);
+          reservationStatus.textContent = bookingError.code === '23505'
+            ? 'Ese horario ya fue reservado. Elige otra hora.'
+            : 'No se pudo guardar la reserva. Inténtalo de nuevo.';
+          whatsappWindow?.close();
+          return;
+        }
+
         const encodedMessage = encodeURIComponent(message);
-        window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, '_blank');
+        reservationStatus.textContent = 'Reserva guardada. Abriendo WhatsApp...';
+        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+        if (whatsappWindow) whatsappWindow.location.href = whatsappUrl;
+        else window.location.href = whatsappUrl;
       });
     } catch (error) {
       console.error(error);

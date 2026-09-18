@@ -50,6 +50,8 @@ npm run start
 4. Inserta servicios opcionales en `services`; la página pública los cargará automáticamente.
 5. Completa una reserva: se registra en `bookings` y se abre un mensaje codificado en WhatsApp.
 
+Después de actualizar `supabase-schema.sql`, vuelve a ejecutar sus cambios en el SQL Editor de Supabase. El esquema incluye una restricción para impedir reservas pendientes o confirmadas en el mismo negocio, fecha y hora. Si ya existen duplicados, corrígelos antes de crear el índice único.
+
 ## Panel del negocio
 
 Abre `admin.html` desde el sitio publicado para crear una cuenta e iniciar sesión con Supabase. Desde el panel puedes guardar los datos del negocio, agregar servicios y actualizar el estado de las reservas recibidas.

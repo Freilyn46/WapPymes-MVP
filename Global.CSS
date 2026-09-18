@@ -10,6 +10,23 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.bg-emerald-50 { background-color: #fff1c2 !important; }
+.bg-emerald-100 { background-color: #f8e8ae !important; }
+.bg-emerald-500 { background-color: #c92b1c !important; }
+.bg-emerald-600 { background-color: #ab1509 !important; }
+.bg-emerald-700 { background-color: #8f1107 !important; }
+.text-emerald-100 { color: #fff7d3 !important; }
+.text-emerald-200 { color: #f8dfaa !important; }
+.text-emerald-600 { color: #ab1509 !important; }
+.text-emerald-700 { color: #8f1107 !important; }
+.border-emerald-200 { border-color: #edcf7a !important; }
+.border-emerald-600 { border-color: #ab1509 !important; }
+.focus\:ring-emerald-500:focus { --tw-ring-color: #ab1509 !important; }
+.hover\:bg-emerald-50:hover { background-color: #fff1c2 !important; }
+.hover\:bg-emerald-700:hover { background-color: #8f1107 !important; }
+.hover\:underline:hover { text-decoration-color: #ab1509; }
+.bg-green-400 { background-color: #e5bd43 !important; }
+
 html {
   scroll-behavior: smooth;
 }

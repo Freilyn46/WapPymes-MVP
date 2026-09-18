@@ -14,7 +14,15 @@
     }
 
     if (!window.supabaseClient) {
-      window.supabaseClient = window.supabase.createClient(url, key);
+      window.supabaseClient = window.supabase.createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+          storageKey: 'wappymes-auth'
+        }
+      });
     }
 
     return window.supabaseClient;
@@ -35,6 +43,13 @@
     return await window.supabaseClient.auth.signOut();
   }
 
+  async function getSession() {
+    if (!window.supabaseClient) init();
+    const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+    if (error) return null;
+    return session;
+  }
+
   async function getUser() {
     if (!window.supabaseClient) init();
     return await window.supabaseClient.auth.getUser();
@@ -42,16 +57,20 @@
 
   async function getCurrentUser() {
     if (!window.supabaseClient) init();
+
+    const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+    if (sessionError || !session) return null;
+
     const { data: { user }, error } = await window.supabaseClient.auth.getUser();
     if (error) return null;
     return user;
   }
 
-  async function saveBusiness({ slug_url, name, whatsapp_phone, owner_id }) {
+  async function saveBusiness({ slug_url, name, whatsapp_phone, owner_id, business_description = null }) {
     if (!window.supabaseClient) init();
     return await window.supabaseClient
       .from('businesses')
-      .upsert([{ slug_url, name, whatsapp_phone, owner_id }], { onConflict: 'slug_url' })
+      .upsert([{ slug_url, name, whatsapp_phone, owner_id, business_description }], { onConflict: 'slug_url' })
       .select();
   }
 
@@ -59,7 +78,7 @@
     if (!window.supabaseClient) init();
     return await window.supabaseClient
       .from('businesses')
-      .select('*')
+      .select('id, slug_url, name, whatsapp_phone, business_description')
       .eq('slug_url', slug_url)
       .maybeSingle();
   }
@@ -80,6 +99,7 @@
 
   window.SB = {
     init,
+    getSession,
     signUp,
     signIn,
     signOut,

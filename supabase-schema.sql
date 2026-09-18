@@ -34,6 +34,11 @@ create table if not exists public.bookings (
 
 create index if not exists services_business_id_idx on public.services (business_id);
 create index if not exists bookings_business_id_created_at_idx on public.bookings (business_id, created_at desc);
+create unique index if not exists bookings_active_slot_unique_idx
+on public.bookings (business_id, requested_date, requested_time)
+where requested_date is not null
+  and requested_time is not null
+  and status in ('pending', 'confirmed');
 
 alter table public.businesses enable row level security;
 alter table public.services enable row level security;
@@ -81,6 +86,13 @@ with check (
   exists (
     select 1 from public.businesses b
     where b.id = business_id
+  )
+  and (
+    service_id is null
+    or exists (
+      select 1 from public.services s
+      where s.id = service_id and s.business_id = bookings.business_id and s.active = true
+    )
   )
 );
 

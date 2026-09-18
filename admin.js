@@ -11,10 +11,24 @@
     return String(value || '').replace(/\D/g, '');
   }
 
+  function normalizeWhatsAppPhone(value) {
+    const phone = cleanPhone(value);
+    if (/^(809|829|849)\d{7}$/.test(phone)) return `1${phone}`;
+    return phone;
+  }
+
   function showStatus(message, error = false) {
     const element = $('appStatus');
+    if (!element) return;
+
+    if (error) {
+      element.textContent = message || 'Ocurrió un error. Inténtalo de nuevo.';
+      element.className = 'mb-6 rounded-xl bg-red-100 p-3 text-sm text-red-800';
+      return;
+    }
+
     element.textContent = message;
-    element.className = `mb-6 rounded-xl p-3 text-sm ${error ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`;
+    element.className = 'mb-6 rounded-xl p-3 text-sm bg-emerald-100 text-emerald-700';
   }
 
   function formatDate(value) {
@@ -22,16 +36,21 @@
   }
 
   async function loadBusiness() {
-    const { data, error } = await window.supabaseClient.from('businesses')
-      .select('*').eq('owner_id', state.user.id).maybeSingle();
+    const { data: businesses, error } = await window.supabaseClient.from('businesses')
+      .select('id, owner_id, slug_url, name, whatsapp_phone, business_description, created_at')
+      .eq('owner_id', state.user.id)
+      .order('created_at', { ascending: true })
+      .limit(1);
     if (error) throw error;
+    const data = businesses?.[0] || null;
     state.business = data;
     if (!data) return;
     $('businessName').value = data.name || '';
     $('businessSlug').value = data.slug_url || '';
     $('businessPhone').value = data.whatsapp_phone || '';
     $('businessDescription').value = data.business_description || '';
-    $('publicLink').innerHTML = `Página pública: <a class="font-semibold text-emerald-700 hover:underline" href="business.html?slug=${encodeURIComponent(data.slug_url)}" target="_blank">business.html?slug=${data.slug_url}</a>`;
+    const publicUrl = new URL(`business.html?slug=${encodeURIComponent(data.slug_url)}`, window.location.href).toString();
+    $('publicLink').innerHTML = `Página pública: <a class="font-semibold text-emerald-700 hover:underline" href="${publicUrl}" target="_blank" rel="noopener">${publicUrl}</a>`;
     await Promise.all([loadServices(), loadBookings()]);
   }
 
@@ -121,19 +140,33 @@
       event.preventDefault();
       try {
         const slug = slugify($('businessSlug').value || $('businessName').value);
-        const payload = { owner_id: state.user.id, slug_url: slug, name: $('businessName').value.trim(), whatsapp_phone: cleanPhone($('businessPhone').value), business_description: $('businessDescription').value.trim() };
-        const { data, error } = await window.supabaseClient.from('businesses').upsert(payload, { onConflict: 'slug_url' }).select().single();
+        const name = $('businessName').value.trim();
+        const whatsappPhone = normalizeWhatsAppPhone($('businessPhone').value);
+        if (!slug || !name || !/^1\d{10}$/.test(whatsappPhone)) {
+          showStatus('Completa el nombre, un slug válido y un WhatsApp de 10 dígitos con código de país.', true);
+          return;
+        }
+        const payload = { owner_id: state.user.id, slug_url: slug, name, whatsapp_phone: whatsappPhone, business_description: $('businessDescription').value.trim() || null };
+        const { data: savedBusinesses, error } = await window.supabaseClient.from('businesses').upsert(payload, { onConflict: 'slug_url' }).select();
         if (error) throw error;
+        const data = savedBusinesses?.[0];
+        if (!data) throw new Error('Supabase no devolvió el negocio guardado.');
         state.business = data;
         await loadBusiness();
         showStatus('Datos del negocio guardados.');
-      } catch (error) { showStatus(error.message, true); }
+      } catch (error) { showStatus('No se pudieron guardar los datos del negocio. Revisa la conexión y los permisos.', true); console.error(error); }
     });
     $('serviceForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       if (!state.business) return showStatus('Primero guarda los datos del negocio.', true);
-      const { error } = await window.supabaseClient.from('services').insert({ business_id: state.business.id, name: $('serviceName').value.trim(), description: $('serviceDescription').value.trim() || null, price: $('servicePrice').value || null, duration_minutes: $('serviceDuration').value || null });
-      if (error) return showStatus(error.message, true);
+      const name = $('serviceName').value.trim();
+      const duration = $('serviceDuration').value ? Number($('serviceDuration').value) : null;
+      const price = $('servicePrice').value ? Number($('servicePrice').value) : null;
+      if (!name || (duration !== null && (!Number.isInteger(duration) || duration < 1)) || (price !== null && price < 0)) {
+        return showStatus('Revisa el nombre, precio y duración del servicio.', true);
+      }
+      const { error } = await window.supabaseClient.from('services').insert({ business_id: state.business.id, name, description: $('serviceDescription').value.trim() || null, price, duration_minutes: duration });
+      if (error) return showStatus('No se pudo agregar el servicio. Revisa la conexión y los permisos.', true);
       event.target.reset();
       await loadServices();
       showStatus('Servicio agregado.');
